@@ -5,16 +5,17 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import 'package:university_asset_maintenance/widgets/notification_badge.dart';
-import 'package:university_asset_maintenance/providers/auth_provider.dart';
-import 'package:university_asset_maintenance/providers/theme_provider.dart';
-import 'package:university_asset_maintenance/providers/notification_provider.dart';
-import 'package:university_asset_maintenance/helpers/db_helper.dart';
-import 'package:university_asset_maintenance/models/complaint_model.dart';
-import 'package:university_asset_maintenance/auth/profile_screen.dart';
+import '../../widgets/notification_badge.dart';
+import '../../providers/auth_provider.dart';
+import '../../providers/theme_provider.dart';
+import '../../providers/notification_provider.dart';
+import '../../helpers/db_helper.dart';
+import '../../models/complaint_model.dart';
+import '../../auth/profile_screen.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({Key? key}) : super(key: key);
+
   @override
   State<AdminDashboardScreen> createState() => _AdminDashboardScreenState();
 }
@@ -54,6 +55,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
       _needsVer = list.where((c) => c.status == 'needs_verification').length;
       _closed = list.where((c) => c.status == 'closed').length;
     });
+
     _firstLoad = false;
   }
 
@@ -99,8 +101,9 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   Widget _buildStatCard(String label, int value, Color color) {
     return Card(
       margin: const EdgeInsets.symmetric(vertical: 6, horizontal: 16),
+      elevation: 2,
       child: Padding(
-        padding: const EdgeInsets.all(12),
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
         child: Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
@@ -116,17 +119,19 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = context.watch<ThemeProvider>();
-    final auth = context.watch<AuthProvider>();
+    final theme     = context.watch<ThemeProvider>();
+    final auth      = context.watch<AuthProvider>();
     final adminName = auth.user?.name ?? 'Admin';
 
+    // Styles
     final headerStyle = Theme.of(context)
         .textTheme
         .bodyLarge!
         .copyWith(fontWeight: FontWeight.bold);
-    final dataStyle = Theme.of(context).textTheme.bodyMedium!;
+    final dataStyle   = Theme.of(context).textTheme.bodyMedium!;
 
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    // Pick a contrasting heading row color
+    final isDark       = Theme.of(context).brightness == Brightness.dark;
     final headingColor = isDark ? Colors.grey.shade800 : Colors.grey.shade200;
 
     return Scaffold(
@@ -142,10 +147,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
           IconButton(
             icon: const Icon(Icons.person),
             tooltip: 'Profile',
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => ProfileScreen()),
-            ),
+            onPressed: () =>
+                Navigator.push(context, MaterialPageRoute(builder: (_) => const ProfileScreen())),
           ),
           IconButton(
             icon: const Icon(Icons.logout),
@@ -162,17 +165,23 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         child: ListView(
           padding: EdgeInsets.zero,
           children: [
+            // Welcome header
             Padding(
               padding: const EdgeInsets.all(16),
               child: Text('Welcome, $adminName',
                   style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
             ),
-            _buildStatCard('Total', _total, Colors.blue),
+
+            // Vertical stats cards
+            _buildStatCard('Total',      _total,      Colors.blue),
             _buildStatCard('Unassigned', _unassigned, Colors.orange),
-            _buildStatCard('Assigned', _assigned, Colors.indigo),
-            _buildStatCard('Needs Ver.', _needsVer, Colors.purple),
-            _buildStatCard('Closed', _closed, Colors.green),
+            _buildStatCard('Assigned',   _assigned,   Colors.indigo),
+            _buildStatCard('Needs Ver.', _needsVer,   Colors.purple),
+            _buildStatCard('Closed',     _closed,     Colors.green),
+
             const Divider(thickness: 1, height: 32),
+
+            // Complaints title
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               child: Text('All Complaints',
@@ -181,6 +190,8 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                       .titleMedium!
                       .copyWith(fontWeight: FontWeight.bold)),
             ),
+
+            // Horizontal scrollable table
             Card(
               margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
               color: Theme.of(context).cardColor,
@@ -193,37 +204,37 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 scrollDirection: Axis.horizontal,
                 padding: const EdgeInsets.all(16),
                 child: DataTable(
-                  headingRowColor: MaterialStateProperty.all(headingColor),
+                  headingRowColor: WidgetStateProperty.all(headingColor),
                   columns: [
-                    DataColumn(label: Text('ID', style: headerStyle)),
-                    DataColumn(label: Text('Title', style: headerStyle)),
+                    DataColumn(label: Text('ID',      style: headerStyle)),
+                    DataColumn(label: Text('Title',   style: headerStyle)),
                     DataColumn(label: Text('Teacher', style: headerStyle)),
-                    DataColumn(label: Text('Staff', style: headerStyle)),
-                    DataColumn(label: Text('Status', style: headerStyle)),
-                    DataColumn(label: Text('Media', style: headerStyle)),
+                    DataColumn(label: Text('Staff',   style: headerStyle)),
+                    DataColumn(label: Text('Status',  style: headerStyle)),
+                    DataColumn(label: Text('Media',   style: headerStyle)),
                     DataColumn(label: Text('Actions', style: headerStyle)),
                   ],
-                  rows: _all.map((c) {
-                    return DataRow(cells: [
-                      DataCell(Text('${c.id}', style: dataStyle)),
-                      DataCell(Text(c.title, style: dataStyle)),
-                      DataCell(Text('${c.teacherId}', style: dataStyle)),
-                      DataCell(Text(c.staffId?.toString() ?? '-', style: dataStyle)),
-                      DataCell(Text(
-                          c.status.replaceAll('_', ' ').toUpperCase(),
-                          style: dataStyle)),
-                      DataCell(
-                        c.mediaPath != null
-                            ? (c.mediaIsVideo
-                                ? Icon(Icons.videocam, color: Theme.of(context).primaryColor)
-                                : Image.file(File(c.mediaPath!), width: 48, fit: BoxFit.cover))
-                            : Text('-', style: dataStyle),
-                      ),
-                      DataCell(Row(children: [
+                  rows: _all.map((c) => DataRow(cells: [
+                    DataCell(Text('${c.id}', style: dataStyle)),
+                    DataCell(Text(c.title,    style: dataStyle)),
+                    DataCell(Text('${c.teacherId}', style: dataStyle)),
+                    DataCell(Text(c.staffId?.toString() ?? '-', style: dataStyle)),
+                    DataCell(Text(c.status.replaceAll('_', ' ').toUpperCase(),
+                        style: dataStyle)),
+                    DataCell(
+                      c.mediaPath != null
+                          ? (c.mediaIsVideo
+                              ? Icon(Icons.videocam, color: Theme.of(context).primaryColor)
+                              : Image.file(File(c.mediaPath!), width: 48, fit: BoxFit.cover))
+                          : Text('-', style: dataStyle),
+                    ),
+                    DataCell(Row(
+                      children: [
                         if (c.status == 'unassigned')
                           ElevatedButton(
                             onPressed: () => _assignDialog(c),
-                            child: const Text('Assign', style: TextStyle(fontSize: 12)),
+                            child: const Text('Assign',
+                                style: TextStyle(fontSize: 12)),
                           ),
                         if (c.status == 'needs_verification')
                           ElevatedButton(
@@ -231,19 +242,20 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                               c.status = 'closed';
                               await DBHelper.updateComplaint(c);
                               context.read<NotificationProvider>().add(
-                                    title: 'Complaint Resolved',
-                                    body: 'Complaint #${c.id} closed.',
-                                  );
+                                title: 'Complaint Resolved',
+                                body: 'Complaint #${c.id} closed.',
+                              );
                               _reload();
                             },
                             child: const Text('Verify'),
                           ),
-                      ])),
-                    ]);
-                  }).toList(),
+                      ],
+                    )),
+                  ])).toList(),
                 ),
               ),
             ),
+
             const SizedBox(height: 24),
           ],
         ),

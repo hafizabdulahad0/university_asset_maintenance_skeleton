@@ -21,6 +21,7 @@ class DBHelper {
       path,
       version: 2,
       onCreate: (db, version) async {
+        // Users table
         await db.execute('''
           CREATE TABLE users(
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -30,6 +31,8 @@ class DBHelper {
             role TEXT    NOT NULL
           );
         ''');
+
+        // Complaints table
         await db.execute('''
           CREATE TABLE complaints(
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -72,7 +75,7 @@ class DBHelper {
     return User.fromMap(maps.first);
   }
 
-  /// **New**: Fetch a user by their integer ID, or null if not found.
+  /// Fetch a user by their integer ID, or null if not found.
   static Future<User?> getUserById(int id) async {
     final maps = await _db.query(
       'users',
