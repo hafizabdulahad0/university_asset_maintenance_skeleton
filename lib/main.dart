@@ -9,7 +9,7 @@ import 'models/user_model.dart';
 import 'services/supabase_service.dart';
 import 'models/complaint_model.dart';
 
-import 'helpers/db_helper.dart';
+// Local DB removed
 import 'providers/auth_provider.dart';
 import 'providers/complaint_provider.dart';
 import 'providers/theme_provider.dart';
@@ -35,10 +35,7 @@ Future<void> main() async {
   await dotenv.load(fileName: ".env");
   await initSupabase();
 
-  // Initialize local DB (skip on web)
-  if (!kIsWeb) {
-    await DBHelper.initDb();
-  }
+  // Local DB removed
 
   // Notifications/FCM removed
 

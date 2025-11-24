@@ -10,15 +10,30 @@ class SupabaseService {
     if (uid == null) {
       throw Exception('No auth session');
     }
-    await supabase.from('users').upsert({
+    final data = {
       'id': uid,
       'auth_user_id': uid,
       'name': user.name,
       'email': user.email,
-      'role': user.role,
+      'role': user.role.toLowerCase(),
       'created_at': user.createdAt,
       'updated_at': user.updatedAt,
-    });
+    };
+    try {
+      await supabase.from('users').upsert(data, onConflict: 'id');
+    } catch (e) {
+      final msg = e.toString();
+      if (msg.contains('duplicate key value') && msg.contains('users_email_key')) {
+        await supabase.from('users').update({
+          'auth_user_id': uid,
+          'name': user.name,
+          'role': user.role.toLowerCase(),
+          'updated_at': user.updatedAt,
+        }).eq('email', user.email);
+      } else {
+        rethrow;
+      }
+    }
     return uid;
   }
 
@@ -29,7 +44,7 @@ class SupabaseService {
   }
 
   static Future<app_models.User?> getUserById(String id) async {
-    final data = await supabase.from('users').select().eq('id', id).maybeSingle();
+    final data = await supabase.from('users').select().or('id.eq.$id,auth_user_id.eq.$id').maybeSingle();
     if (data == null) return null;
     return app_models.User.fromMap(data);
   }

@@ -3,8 +3,6 @@
 plugins {
     // Android application plugin
     id("com.android.application")
-    // Apply Google services (Firebase) plugin
-    id("com.google.gms.google-services")
     // Kotlin support
     id("kotlin-android")
     // Flutter’s Gradle plugin — keep this last
@@ -53,14 +51,6 @@ android {
 }
 
 dependencies {
-    // Firebase BoM for consistent versions
-    implementation(platform("com.google.firebase:firebase-bom:33.13.0"))
-    // Firebase Cloud Messaging
-    implementation("com.google.firebase:firebase-messaging")
-    // (Optional) other Firebase libraries, e.g. Analytics:
-    // implementation("com.google.firebase:firebase-analytics-ktx")
-
-    // Desugaring library (must be ≥ 2.1.4 for flutter_local_notifications ≥ 13)
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.5")
 }
 

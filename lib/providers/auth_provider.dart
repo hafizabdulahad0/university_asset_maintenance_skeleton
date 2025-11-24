@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:university_asset_maintenance/services/supabase_service.dart';
 import 'package:university_asset_maintenance/core/supabase_client.dart';
 import 'package:university_asset_maintenance/models/user_model.dart';
+import 'package:supabase_flutter/supabase_flutter.dart' show AuthException;
+import 'package:supabase/supabase.dart' show PostgrestException;
 
 class AuthProvider with ChangeNotifier {
   User? _user;
@@ -22,10 +24,17 @@ class AuthProvider with ChangeNotifier {
       final sess = res.session;
       if (sess == null || sess.user.email == null) return 'Invalid credentials';
       final uid = sess.user.id;
-      final profile = await SupabaseService.getUserById(uid);
-      _user = profile ??
-          User(id: uid, name: email.split('@').first, email: email, role: 'teacher', createdAt: '', updatedAt: '');
+      var profile = await SupabaseService.getUserById(uid);
+      if (profile == null) {
+        final now = DateTime.now().toIso8601String();
+        final temp = User(id: uid, name: email.split('@').first, email: email, role: 'teacher', createdAt: now, updatedAt: now);
+        await SupabaseService.upsertUserFromAuth(temp);
+        profile = temp;
+      }
+      _user = profile;
     } catch (e) {
+      if (e is AuthException) return e.message;
+      if (e is PostgrestException) return e.message ?? 'Login failed';
       return 'Login failed';
     }
     notifyListeners();
@@ -34,12 +43,19 @@ class AuthProvider with ChangeNotifier {
 
   Future<String?> register(User user, String password) async {
     try {
+      await supabase.auth.signOut();
       final existing = await SupabaseService.getUserByEmail(user.email);
       if (existing != null) return 'Email already registered';
       final res = await supabase.auth.signUp(email: user.email, password: password);
       if (res.user == null) return 'Sign up failed';
-      // Optional profile upsert skipped due to RLS; admin can set roles later
+      final now = DateTime.now().toIso8601String();
+      user.id = res.user!.id;
+      user.createdAt = now;
+      user.updatedAt = now;
+      await SupabaseService.upsertUserFromAuth(user);
     } catch (e) {
+      if (e is AuthException) return e.message;
+      if (e is PostgrestException) return e.message ?? 'Sign up failed';
       return 'Sign up failed';
     }
     return null;

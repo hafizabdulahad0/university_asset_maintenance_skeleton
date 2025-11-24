@@ -133,7 +133,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         child: _sendingOtp
                           ? const Center(child: CircularProgressIndicator())
                           : GradientButton(
-                              text: 'Send OTP & Register',
+                              text: 'Register',
                               onPressed: _onRegister,
                             ),
                       ),
