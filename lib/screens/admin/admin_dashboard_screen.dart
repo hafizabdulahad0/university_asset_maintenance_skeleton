@@ -11,6 +11,7 @@ import '../../providers/theme_provider.dart';
 import '../../providers/notification_provider.dart';
 import '../../services/supabase_service.dart';
 import '../../models/complaint_model.dart';
+import '../../models/user_model.dart' as app_models;
 import '../../auth/profile_screen.dart';
 import '../../widgets/gradient_scaffold.dart';
 import '../../widgets/hover_scale.dart';
@@ -62,34 +63,52 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   }
 
   Future<void> _assignDialog(Complaint c) async {
-    final ctl = TextEditingController();
+    final staffList = await SupabaseService.getStaffList();
+    String? selectedStaffId;
     await showDialog(
       context: context,
       builder: (_) => AlertDialog(
         title: Text('Assign Complaint #${c.id}'),
-        content: TextField(
-          controller: ctl,
-          decoration: const InputDecoration(labelText: 'Staff UUID'),
-        ),
+        content: staffList.isEmpty
+            ? const Text('No staff available')
+            : DropdownButtonFormField<String>(
+                decoration: const InputDecoration(labelText: 'Staff'),
+                items: staffList
+                    .map((app_models.User u) => DropdownMenuItem<String>(
+                          value: u.id,
+                          child: Text('${u.name} (${u.email})'),
+                        ))
+                    .toList(),
+                onChanged: (v) => selectedStaffId = v,
+              ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
           ElevatedButton(
             onPressed: () async {
-              final id = ctl.text.trim();
-              if (id.isNotEmpty) {
-                c.staffId = id;
-                c.status = 'assigned';
-                await SupabaseService.updateComplaint(c);
-
+              final id = selectedStaffId;
+              if (id == null || id.isEmpty) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Please select a staff member')),
+                );
+                return;
+              }
+              try {
+                await SupabaseService.assignComplaintToStaff(
+                  complaintId: c.id!,
+                  staffId: id,
+                );
                 final staff = await SupabaseService.getUserById(id);
                 final staffName = staff?.name ?? 'unknown';
                 context.read<NotificationProvider>().add(
                   title: 'Complaint Assigned',
                   body: 'Complaint #${c.id} assigned to $staffName.',
                 );
-
                 Navigator.pop(context);
                 _reload();
+              } catch (e) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Assignment failed: ${e.toString()}')),
+                );
               }
             },
             child: const Text('Assign'),

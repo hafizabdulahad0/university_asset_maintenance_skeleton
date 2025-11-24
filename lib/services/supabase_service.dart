@@ -49,6 +49,27 @@ class SupabaseService {
     return app_models.User.fromMap(data);
   }
 
+  static Future<List<app_models.User>> getStaffList() async {
+    final rows = await supabase
+        .from('users')
+        .select('id,name,email,role')
+        .eq('role', 'staff')
+        .order('name');
+    return (rows as List)
+        .map<app_models.User>((m) => app_models.User.fromMap(m as Map<String, dynamic>))
+        .toList();
+  }
+
+  static Future<void> assignComplaintToStaff({
+    required int complaintId,
+    required String staffId,
+  }) async {
+    await supabase
+        .from('complaints')
+        .update({'staff_id': staffId, 'status': 'assigned'})
+        .eq('id', complaintId);
+  }
+
   static Future<int> updateUser(app_models.User user) async {
     final res = await supabase
         .from('users')
@@ -111,15 +132,30 @@ class SupabaseService {
     return maps.map<Complaint>(_fromDb).toList();
   }
 
+  static Future<List<Complaint>> getCompletedByStaff(String staffId) async {
+    final maps = await supabase
+        .from('complaints')
+        .select()
+        .eq('staff_id', staffId)
+        .eq('status', 'needs_verification');
+    return maps.map<Complaint>(_fromDb).toList();
+  }
+
   static Future<List<Complaint>> getAllComplaints() async {
     final maps = await supabase.from('complaints').select();
     return maps.map<Complaint>(_fromDb).toList();
   }
 
   static Future<int> updateComplaint(Complaint c) async {
+    final payload = {
+      'status': c.status,
+      'staff_id': c.staffId,
+      'media_path': c.mediaPath,
+      'media_is_video': c.mediaIsVideo,
+    };
     final res = await supabase
         .from('complaints')
-        .update(c.toMap())
+        .update(payload)
         .eq('id', c.id!)
         .select('id');
     return res.length;

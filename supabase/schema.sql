@@ -104,6 +104,12 @@ create policy complaints_update_admin_only on public.complaints
 for update using (public.is_admin(auth.uid()))
 with check (public.is_admin(auth.uid()));
 
+drop policy if exists complaints_staff_mark_done on public.complaints;
+create policy complaints_staff_mark_done on public.complaints
+for update
+using (staff_id = auth.uid() and status = 'assigned')
+with check (staff_id = auth.uid() and status = 'needs_verification');
+
 create index if not exists complaints_teacher_idx on public.complaints(teacher_id);
 create index if not exists complaints_staff_idx on public.complaints(staff_id);
 create index if not exists complaints_staff_status_idx on public.complaints(staff_id, status);

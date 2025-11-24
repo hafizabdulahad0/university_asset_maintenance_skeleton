@@ -23,7 +23,7 @@ class StaffHomeScreen extends StatefulWidget {
 
 class _StaffHomeScreenState extends State<StaffHomeScreen> {
   bool _loading = true;
-  List<Complaint> _unassigned = [], _assigned = [];
+  List<Complaint> _unassigned = [], _assigned = [], _completed = [];
 
   @override
   void initState() {
@@ -38,6 +38,9 @@ class _StaffHomeScreenState extends State<StaffHomeScreen> {
       _unassigned = await SupabaseService.getUnassignedComplaints();
       _assigned = user != null
           ? await SupabaseService.getAssignedComplaintsByStaff(user.id!)
+          : <Complaint>[];
+      _completed = user != null
+          ? await SupabaseService.getCompletedByStaff(user.id!)
           : <Complaint>[];
     } finally {
       if (mounted) setState(() => _loading = false);
@@ -157,6 +160,26 @@ class _StaffHomeScreenState extends State<StaffHomeScreen> {
                         else
                           ..._assigned.map((c) => HoverScale(child:
                               _buildAssignedCard(c, notifProv, auth.user!))),
+
+                        const Divider(height: 32, thickness: 1),
+
+                        // Section: Completed Assignments
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          child: Text(
+                            'Completed Assignments',
+                            style: Theme.of(context)
+                                .textTheme
+                                .titleMedium!
+                                .copyWith(fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        if (_completed.isEmpty)
+                          _emptyCard('No completed assignments.')
+                        else
+                          ..._completed.map((c) => HoverScale(child:
+                              _buildCompletedCard(c))),
                       ],
                     ),
                   ),
@@ -279,20 +302,63 @@ class _StaffHomeScreenState extends State<StaffHomeScreen> {
                       backgroundColor: _statusColor(c.status),
                     ),
                     ElevatedButton(
-                      onPressed: user.role == 'admin'
-                          ? () async {
-                              c.status = 'needs_verification';
-                              await SupabaseService.updateComplaint(c);
-                              notifProv.add(
-                                title: 'Task Completed',
-                                body: 'Staff ${user.name} completed complaint #${c.id}.',
-                              );
-                              await _loadComplaints();
-                            }
-                          : null,
+                      onPressed: () async {
+                        try {
+                          c.status = 'needs_verification';
+                          await SupabaseService.updateComplaint(c);
+                          notifProv.add(
+                            title: 'Task Completed',
+                            body: 'Staff ${user.name} completed complaint #${c.id}.',
+                          );
+                          await _loadComplaints();
+                        } catch (e) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Update failed: ${e.toString()}')),
+                          );
+                        }
+                      },
                       child: const Text('Mark Done'),
                     ),
                   ],
+                ),
+              ],
+            ),
+          ),
+        ]),
+      ),
+    );
+  }
+
+  Widget _buildCompletedCard(Complaint c) {
+    return Card(
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: BorderSide(color: _statusColor(c.status).withOpacity(0.4)),
+      ),
+      elevation: 2,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(children: [
+          _buildThumbnail(c),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(c.title,
+                    style: const TextStyle(
+                        fontSize: 16, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 6),
+                Text(c.description,
+                    maxLines: 2, overflow: TextOverflow.ellipsis),
+                const SizedBox(height: 12),
+                Chip(
+                  label: Text(
+                    c.status.replaceAll('_', ' ').toUpperCase(),
+                    style: const TextStyle(color: Colors.white),
+                  ),
+                  backgroundColor: _statusColor(c.status),
                 ),
               ],
             ),
