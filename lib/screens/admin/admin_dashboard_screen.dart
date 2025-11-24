@@ -9,9 +9,11 @@ import '../../widgets/notification_badge.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/theme_provider.dart';
 import '../../providers/notification_provider.dart';
-import '../../helpers/db_helper.dart';
+import '../../services/supabase_service.dart';
 import '../../models/complaint_model.dart';
 import '../../auth/profile_screen.dart';
+import '../../widgets/gradient_scaffold.dart';
+import '../../widgets/hover_scale.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
   const AdminDashboardScreen({Key? key}) : super(key: key);
@@ -34,7 +36,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
   Future<void> _reload() async {
     final notifProv = context.read<NotificationProvider>();
     final oldIds = _all.map((c) => c.id).whereType<int>().toSet();
-    final list = await DBHelper.getAllComplaints();
+    final list = await SupabaseService.getAllComplaints();
 
     if (!_firstLoad) {
       for (var c in list) {
@@ -67,20 +69,19 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
         title: Text('Assign Complaint #${c.id}'),
         content: TextField(
           controller: ctl,
-          decoration: const InputDecoration(labelText: 'Staff ID'),
-          keyboardType: TextInputType.number,
+          decoration: const InputDecoration(labelText: 'Staff UUID'),
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context), child: const Text('Cancel')),
           ElevatedButton(
             onPressed: () async {
-              final id = int.tryParse(ctl.text.trim());
-              if (id != null) {
+              final id = ctl.text.trim();
+              if (id.isNotEmpty) {
                 c.staffId = id;
                 c.status = 'assigned';
-                await DBHelper.updateComplaint(c);
+                await SupabaseService.updateComplaint(c);
 
-                final staff = await DBHelper.getUserById(id);
+                final staff = await SupabaseService.getUserById(id);
                 final staffName = staff?.name ?? 'unknown';
                 context.read<NotificationProvider>().add(
                   title: 'Complaint Assigned',
@@ -134,7 +135,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
     final isDark       = Theme.of(context).brightness == Brightness.dark;
     final headingColor = isDark ? Colors.grey.shade800 : Colors.grey.shade200;
 
-    return Scaffold(
+    return GradientScaffold(
       appBar: AppBar(
         title: const Text('Admin Dashboard'),
         actions: [
@@ -173,11 +174,11 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
             ),
 
             // Vertical stats cards
-            _buildStatCard('Total',      _total,      Colors.blue),
-            _buildStatCard('Unassigned', _unassigned, Colors.orange),
-            _buildStatCard('Assigned',   _assigned,   Colors.indigo),
-            _buildStatCard('Needs Ver.', _needsVer,   Colors.purple),
-            _buildStatCard('Closed',     _closed,     Colors.green),
+            HoverScale(child: _buildStatCard('Total',      _total,      Colors.blue)),
+            HoverScale(child: _buildStatCard('Unassigned', _unassigned, Colors.orange)),
+            HoverScale(child: _buildStatCard('Assigned',   _assigned,   Colors.indigo)),
+            HoverScale(child: _buildStatCard('Needs Ver.', _needsVer,   Colors.purple)),
+            HoverScale(child: _buildStatCard('Closed',     _closed,     Colors.green)),
 
             const Divider(thickness: 1, height: 32),
 
@@ -204,7 +205,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                 scrollDirection: Axis.horizontal,
                 padding: const EdgeInsets.all(16),
                 child: DataTable(
-                  headingRowColor: WidgetStateProperty.all(headingColor),
+                  headingRowColor: MaterialStateProperty.all(headingColor),
                   columns: [
                     DataColumn(label: Text('ID',      style: headerStyle)),
                     DataColumn(label: Text('Title',   style: headerStyle)),
@@ -240,7 +241,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> {
                           ElevatedButton(
                             onPressed: () async {
                               c.status = 'closed';
-                              await DBHelper.updateComplaint(c);
+                              await SupabaseService.updateComplaint(c);
                               context.read<NotificationProvider>().add(
                                 title: 'Complaint Resolved',
                                 body: 'Complaint #${c.id} closed.',

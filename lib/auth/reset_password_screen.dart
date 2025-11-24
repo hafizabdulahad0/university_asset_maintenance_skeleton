@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import '../helpers/db_helper.dart';
+import '../core/supabase_client.dart';
+import 'package:supabase/supabase.dart';
 import 'login_screen.dart';
 
 class ResetPasswordScreen extends StatefulWidget {
@@ -18,13 +19,11 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
   Future<void> _reset() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() { _saving = true; _error = null; });
-    final user = await DBHelper.getUserByEmail(widget.email);
-    if (user == null) {
-      setState(() { _error = 'User not found'; _saving = false; });
+    final res = await supabase.auth.updateUser(UserAttributes(password: _passCtl.text.trim()));
+    if (res.user == null) {
+      setState(() { _error = 'Password reset failed'; _saving = false; });
       return;
     }
-    user.password = _passCtl.text.trim();
-    await DBHelper.updateUser(user);
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Password reset successful.')),
     );
@@ -39,8 +38,16 @@ class _ResetPasswordScreenState extends State<ResetPasswordScreen> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('Reset Password')),
-      body: SafeArea(
+      extendBodyBehindAppBar: true,
+      appBar: AppBar(title: const Text('Reset Password'), backgroundColor: Colors.transparent, elevation: 0),
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Color(0xFF0EA5E9), Color(0xFF9333EA)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+        ),
         child: Center(
           child: SingleChildScrollView(
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),

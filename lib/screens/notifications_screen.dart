@@ -2,6 +2,8 @@
 
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../widgets/gradient_scaffold.dart';
+import '../widgets/hover_scale.dart';
 
 import '../providers/notification_provider.dart';
 
@@ -12,7 +14,7 @@ class NotificationsScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final notif = context.watch<NotificationProvider>();
 
-    return Scaffold(
+    return GradientScaffold(
       appBar: AppBar(
         title: const Text('Notifications'),
         actions: [
@@ -33,7 +35,7 @@ class NotificationsScreen extends StatelessWidget {
               separatorBuilder: (_, __) => const Divider(height: 1),
               itemBuilder: (ctx, i) {
                 final n = notif.all[i];
-                return ListTile(
+                return HoverScale(child: ListTile(
                   tileColor: n.read ? null : Colors.blue.shade50,
                   leading: Icon(
                     n.read ? Icons.notifications : Icons.notifications_active,
@@ -50,7 +52,7 @@ class NotificationsScreen extends StatelessWidget {
                     style: const TextStyle(fontSize: 12, color: Colors.grey),
                   ),
                   onTap: () => notif.markRead(n.id),
-                );
+                ));
               },
             ),
     );

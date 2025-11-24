@@ -19,7 +19,7 @@ class DBHelper {
 
     _db = await openDatabase(
       path,
-      version: 2,
+      version: 3,
       onCreate: (db, version) async {
         // Users table
         await db.execute('''
@@ -28,7 +28,9 @@ class DBHelper {
             name TEXT    NOT NULL,
             email TEXT   NOT NULL UNIQUE,
             password TEXT NOT NULL,
-            role TEXT    NOT NULL
+            role TEXT    NOT NULL,
+            createdAt TEXT NOT NULL,
+            updatedAt TEXT NOT NULL
           );
         ''');
 
@@ -43,15 +45,34 @@ class DBHelper {
             status TEXT,
             teacherId INTEGER,
             staffId INTEGER,
+            createdAt TEXT NOT NULL,
+            updatedAt TEXT NOT NULL,
             FOREIGN KEY(teacherId) REFERENCES users(id),
             FOREIGN KEY(staffId)  REFERENCES users(id)
           );
         ''');
+
+        // Indexes
+        await db.execute('CREATE INDEX idx_complaints_status ON complaints(status);');
+        await db.execute('CREATE INDEX idx_complaints_teacher ON complaints(teacherId);');
+        await db.execute('CREATE INDEX idx_complaints_staff ON complaints(staffId);');
       },
       onUpgrade: (db, oldVersion, newVersion) async {
         if (oldVersion < 2) {
           await db.execute('ALTER TABLE complaints ADD COLUMN mediaPath TEXT;');
           await db.execute('ALTER TABLE complaints ADD COLUMN mediaIsVideo INTEGER;');
+        }
+        if (oldVersion < 3) {
+          // Add timestamps
+          await db.execute('ALTER TABLE users ADD COLUMN createdAt TEXT DEFAULT "";');
+          await db.execute('ALTER TABLE users ADD COLUMN updatedAt TEXT DEFAULT "";');
+          await db.execute('ALTER TABLE complaints ADD COLUMN createdAt TEXT DEFAULT "";');
+          await db.execute('ALTER TABLE complaints ADD COLUMN updatedAt TEXT DEFAULT "";');
+
+          // Create indexes
+          await db.execute('CREATE INDEX IF NOT EXISTS idx_complaints_status ON complaints(status);');
+          await db.execute('CREATE INDEX IF NOT EXISTS idx_complaints_teacher ON complaints(teacherId);');
+          await db.execute('CREATE INDEX IF NOT EXISTS idx_complaints_staff ON complaints(staffId);');
         }
       },
     );

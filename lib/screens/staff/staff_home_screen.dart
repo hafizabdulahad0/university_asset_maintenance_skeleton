@@ -9,9 +9,11 @@ import '../../widgets/notification_badge.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/theme_provider.dart';
 import '../../providers/notification_provider.dart';
-import '../../helpers/db_helper.dart';
+import '../../services/supabase_service.dart';
 import '../../models/complaint_model.dart';
 import '../../auth/profile_screen.dart';
+import '../../widgets/gradient_scaffold.dart';
+import '../../widgets/hover_scale.dart';
 
 class StaffHomeScreen extends StatefulWidget {
   const StaffHomeScreen({Key? key}) : super(key: key);
@@ -32,9 +34,9 @@ class _StaffHomeScreenState extends State<StaffHomeScreen> {
   Future<void> _loadComplaints() async {
     setState(() => _loading = true);
     final user = context.read<AuthProvider>().user;
-    _unassigned = await DBHelper.getUnassignedComplaints();
+    _unassigned = await SupabaseService.getUnassignedComplaints();
     _assigned = user != null
-        ? await DBHelper.getAssignedComplaintsByStaff(user.id!)
+        ? await SupabaseService.getAssignedComplaintsByStaff(user.id!)
         : <Complaint>[];
     setState(() => _loading = false);
   }
@@ -61,7 +63,7 @@ class _StaffHomeScreenState extends State<StaffHomeScreen> {
     final notifProv = context.read<NotificationProvider>();
     final name      = auth.user?.name ?? 'Staff';
 
-    return Scaffold(
+    return GradientScaffold(
       appBar: AppBar(
         title: const Text('Staff Dashboard'),
         actions: [
@@ -130,8 +132,8 @@ class _StaffHomeScreenState extends State<StaffHomeScreen> {
                         if (_unassigned.isEmpty)
                           _emptyCard('No unassigned complaints.')
                         else
-                          ..._unassigned.map((c) =>
-                              _buildUnassignedCard(c, notifProv, auth.user!)),
+                          ..._unassigned.map((c) => HoverScale(child:
+                              _buildUnassignedCard(c, notifProv, auth.user!))),
 
                         const Divider(height: 32, thickness: 1),
 
@@ -150,8 +152,8 @@ class _StaffHomeScreenState extends State<StaffHomeScreen> {
                         if (_assigned.isEmpty)
                           _emptyCard('No assigned complaints.')
                         else
-                          ..._assigned.map((c) =>
-                              _buildAssignedCard(c, notifProv, auth.user!)),
+                          ..._assigned.map((c) => HoverScale(child:
+                              _buildAssignedCard(c, notifProv, auth.user!))),
                       ],
                     ),
                   ),
@@ -217,7 +219,7 @@ class _StaffHomeScreenState extends State<StaffHomeScreen> {
                       onPressed: () async {
                         c.staffId = user.id;
                         c.status  = 'assigned';
-                        await DBHelper.updateComplaint(c);
+                        await SupabaseService.updateComplaint(c);
                         // Notify admin
                         notifProv.add(
                           title: 'Assignment Requested',
@@ -275,7 +277,7 @@ class _StaffHomeScreenState extends State<StaffHomeScreen> {
                     ElevatedButton(
                       onPressed: () async {
                         c.status = 'needs_verification';
-                        await DBHelper.updateComplaint(c);
+                        await SupabaseService.updateComplaint(c);
                         // Notify admin to verify
                         notifProv.add(
                           title: 'Task Completed',

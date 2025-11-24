@@ -35,7 +35,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
       id:       auth.user!.id,
       name:     _nameCtl.text.trim(),
       email:    auth.user!.email,
-      password: auth.user!.password,
       role:     _role,
     );
     final res = await auth.updateProfile(updated);
@@ -50,8 +49,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
       return Scaffold(body: Center(child: Text('No user found')));
     }
     return Scaffold(
-      appBar: AppBar(title: const Text('Profile')),
-      body: SafeArea(
+      extendBodyBehindAppBar: true,
+      appBar: AppBar(title: const Text('Profile'), backgroundColor: Colors.transparent, elevation: 0),
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Color(0xFF0EA5E9), Color(0xFF9333EA)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+        ),
         child: Center(
           child: SingleChildScrollView(
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),

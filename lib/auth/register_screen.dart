@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/user_model.dart';
 import '../providers/auth_provider.dart';
-import 'verify_otp_screen.dart';
+import '../widgets/gradient_button.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({Key? key}) : super(key: key);
@@ -22,53 +22,61 @@ class _RegisterScreenState extends State<RegisterScreen> {
   Future<void> _onRegister() async {
     if (!_formKey.currentState!.validate()) return;
     final newUser = User(
-      name:     _nameCtl.text.trim(),
-      email:    _emailCtl.text.trim(),
-      password: _passCtl.text.trim(),
-      role:     _role,
+      name: _nameCtl.text.trim(),
+      email: _emailCtl.text.trim(),
+      role: _role,
     );
     setState(() { _sendingOtp = true; _error = null; });
-    final otp = await context.read<AuthProvider>().generateOtp(
-      mode:     'register',
-      tempUser: newUser,
-    );
+    final err = await context.read<AuthProvider>().register(newUser, _passCtl.text.trim());
     setState(() => _sendingOtp = false);
+    if (err != null) {
+      setState(() => _error = err);
+      return;
+    }
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Your OTP (for demo) is: $otp')),
+      const SnackBar(content: Text('Registration successful. Please log in.')),
     );
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (_) => VerifyOtpScreen(mode: 'register'),
-      ),
-    );
+    Navigator.pushReplacementNamed(context, '/login');
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     return Scaffold(
-      appBar: AppBar(title: const Text('Register')),
-      body: SafeArea(
+      extendBodyBehindAppBar: true,
+      appBar: AppBar(title: const Text('Register'), backgroundColor: Colors.transparent, elevation: 0),
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Color(0xFF0EA5E9), Color(0xFF9333EA)],
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+          ),
+        ),
         child: Center(
           child: SingleChildScrollView(
             padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
-            child: Card(
-              elevation: 4,
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Padding(
-                padding: const EdgeInsets.all(20),
-                child: Form(
-                  key: _formKey,
-                  child: Column(
-                    children: [
-                      Text(
-                        'Create Account',
-                        style: theme.textTheme.headlineSmall!
-                          .copyWith(fontWeight: FontWeight.bold),
-                      ),
+            child: TweenAnimationBuilder<double>(
+                tween: Tween(begin: 0.95, end: 1),
+                duration: const Duration(milliseconds: 400),
+                curve: Curves.easeOut,
+                builder: (context, value, child) => Transform.scale(scale: value, child: child),
+                child: Card(
+                  elevation: 4,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: Form(
+                      key: _formKey,
+                      child: Column(
+                        children: [
+                          Text(
+                            'Create Account',
+                            style: theme.textTheme.headlineSmall!
+                              .copyWith(fontWeight: FontWeight.bold),
+                          ),
                       const SizedBox(height: 16),
                       TextFormField(
                         controller: _nameCtl,
@@ -124,15 +132,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         width: double.infinity,
                         child: _sendingOtp
                           ? const Center(child: CircularProgressIndicator())
-                          : ElevatedButton(
+                          : GradientButton(
+                              text: 'Send OTP & Register',
                               onPressed: _onRegister,
-                              style: ElevatedButton.styleFrom(
-                                padding: const EdgeInsets.symmetric(vertical: 14),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(8),
-                                ),
-                              ),
-                              child: const Text('Send OTP & Register'),
                             ),
                       ),
                       const SizedBox(height: 12),
@@ -142,6 +144,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         child: const Text("Already have an account? Log In"),
                       ),
                     ],
+                    ),
                   ),
                 ),
               ),

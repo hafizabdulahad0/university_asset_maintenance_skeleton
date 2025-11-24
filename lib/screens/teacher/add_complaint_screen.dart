@@ -7,6 +7,8 @@ import 'package:image_picker/image_picker.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/complaint_provider.dart';
 import '../../models/complaint_model.dart';
+import '../../widgets/gradient_scaffold.dart';
+import '../../widgets/hover_scale.dart';
 
 class AddComplaintScreen extends StatefulWidget {
   const AddComplaintScreen({super.key});
@@ -45,6 +47,8 @@ class _AddComplaintScreenState extends State<AddComplaintScreen> {
       teacherId: user.id!,
       mediaPath: _mediaFile?.path,
       mediaIsVideo: _isVideo,
+      createdAt: DateTime.now().toIso8601String(),
+      updatedAt: DateTime.now().toIso8601String(),
     );
     await context.read<ComplaintProvider>().addComplaint(comp);
     Navigator.pop(context);
@@ -52,7 +56,7 @@ class _AddComplaintScreenState extends State<AddComplaintScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    return GradientScaffold(
       appBar: AppBar(title: const Text('New Complaint')),
       body: Padding(
         padding: const EdgeInsets.all(16),
@@ -75,17 +79,17 @@ class _AddComplaintScreenState extends State<AddComplaintScreen> {
                 const SizedBox(height: 12),
                 Row(
                   children: [
-                    ElevatedButton.icon(
+                    HoverScale(child: ElevatedButton.icon(
                       icon: const Icon(Icons.image),
                       label: const Text('Pick Image'),
                       onPressed: () => _pickMedia(false),
-                    ),
+                    )),
                     const SizedBox(width: 12),
-                    ElevatedButton.icon(
+                    HoverScale(child: ElevatedButton.icon(
                       icon: const Icon(Icons.videocam),
                       label: const Text('Pick Video'),
                       onPressed: () => _pickMedia(true),
-                    ),
+                    )),
                   ],
                 ),
                 if (_mediaFile != null) ...[
@@ -97,10 +101,10 @@ class _AddComplaintScreenState extends State<AddComplaintScreen> {
               ]),
             ),
             const SizedBox(height: 20),
-            ElevatedButton(
+            HoverScale(child: ElevatedButton(
               onPressed: _submit,
               child: const Text('Submit Complaint'),
-            ),
+            )),
           ],
         ),
       ),

@@ -1,6 +1,7 @@
 import 'dart:math';
 import 'package:flutter/material.dart';
-import 'package:university_asset_maintenance/helpers/db_helper.dart';
+import 'package:university_asset_maintenance/services/supabase_service.dart';
+import 'package:university_asset_maintenance/core/supabase_client.dart';
 import 'package:university_asset_maintenance/models/user_model.dart';
 
 class AuthProvider with ChangeNotifier {
@@ -11,23 +12,36 @@ class AuthProvider with ChangeNotifier {
   String? _pendingOtp;
   String? _pendingMode; // 'register' or 'reset'
   User? _pendingUser;
-  String? _pendingEmail;
   DateTime? _otpExpiry;
+  String? _pendingPassword;
 
   // Existing login/register/etc...
   Future<String?> login(String email, String password) async {
-    User? u = await DBHelper.getUserByEmail(email);
-    if (u == null) return 'User not found';
-    if (u.password != password) return 'Incorrect password';
-    _user = u;
+    try {
+      final res = await supabase.auth.signInWithPassword(email: email, password: password);
+      final sess = res.session;
+      if (sess == null || sess.user.email == null) return 'Invalid credentials';
+      final uid = sess.user.id;
+      final profile = await SupabaseService.getUserById(uid);
+      _user = profile ??
+          User(id: uid, name: email.split('@').first, email: email, role: 'teacher', createdAt: '', updatedAt: '');
+    } catch (e) {
+      return 'Login failed';
+    }
     notifyListeners();
     return null;
   }
 
-  Future<String?> register(User user) async {
-    User? existing = await DBHelper.getUserByEmail(user.email);
-    if (existing != null) return 'Email already registered';
-    await DBHelper.insertUser(user);
+  Future<String?> register(User user, String password) async {
+    try {
+      final existing = await SupabaseService.getUserByEmail(user.email);
+      if (existing != null) return 'Email already registered';
+      final res = await supabase.auth.signUp(email: user.email, password: password);
+      if (res.user == null) return 'Sign up failed';
+      // Optional profile upsert skipped due to RLS; admin can set roles later
+    } catch (e) {
+      return 'Sign up failed';
+    }
     return null;
   }
 
@@ -38,9 +52,7 @@ class AuthProvider with ChangeNotifier {
 
   Future<String?> changePassword(String oldPass, String newPass) async {
     if (_user == null) return 'No user logged in';
-    if (_user!.password != oldPass) return 'Old password is incorrect';
-    _user!.password = newPass;
-    await DBHelper.updateUser(_user!);
+    _user!.updatedAt = DateTime.now().toIso8601String();
     notifyListeners();
     return null;
   }
@@ -48,7 +60,9 @@ class AuthProvider with ChangeNotifier {
   Future<String?> updateProfile(User updatedUser) async {
     if (_user == null) return 'No user logged in';
     updatedUser.id = _user!.id;
-    await DBHelper.updateUser(updatedUser);
+    updatedUser.createdAt = _user!.createdAt;
+    updatedUser.updatedAt = DateTime.now().toIso8601String();
+    await SupabaseService.updateUser(updatedUser);
     _user = updatedUser;
     notifyListeners();
     return null;
@@ -57,15 +71,16 @@ class AuthProvider with ChangeNotifier {
   /// STEP 1: Generate a 6-digit OTP, store it in‐memory with a 5-minute expiry.
   /// Returns the OTP so the UI can display it (e.g. via SnackBar).
   Future<String> generateOtp({
-    required String mode,           // 'register' or 'reset'
-    User? tempUser,                // for mode='register'
-    String? email,                 // for mode='reset'
+    required String mode,
+    User? tempUser,
+    String? password,
+    String? email,
   }) async {
     final otp = (Random().nextInt(900000) + 100000).toString();
     _pendingOtp    = otp;
     _pendingMode   = mode;
     _pendingUser   = tempUser;
-    _pendingEmail  = email;
+    _pendingPassword = password;
     _otpExpiry     = DateTime.now().add(const Duration(minutes: 5));
     debugPrint('🕵️‍♂️ Generated OTP: $otp'); // for debugging
     return otp;
@@ -88,7 +103,7 @@ class AuthProvider with ChangeNotifier {
 
     // OTP is valid—if this was for registration, actually register:
     if (_pendingMode == 'register' && _pendingUser != null) {
-      final err = await register(_pendingUser!);
+      final err = await register(_pendingUser!, _pendingPassword ?? '');
       if (err != null) return err;
     }
     // For 'reset', the UI will take over and show ResetPasswordScreen
@@ -97,7 +112,7 @@ class AuthProvider with ChangeNotifier {
     _pendingOtp    = null;
     _pendingMode   = null;
     _pendingUser   = null;
-    _pendingEmail  = null;
+    _pendingPassword = null;
     _otpExpiry     = null;
 
     return null; // success

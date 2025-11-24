@@ -11,6 +11,8 @@ import '../../providers/complaint_provider.dart';
 import '../../providers/theme_provider.dart';
 import 'add_complaint_screen.dart';
 import 'package:university_asset_maintenance/auth/profile_screen.dart';
+import '../../widgets/gradient_scaffold.dart';
+import '../../widgets/hover_scale.dart';
 
 class TeacherHomeScreen extends StatefulWidget {
   const TeacherHomeScreen({Key? key}) : super(key: key);
@@ -57,7 +59,7 @@ class _TeacherHomeScreenState extends State<TeacherHomeScreen> {
     final complaintP  = context.watch<ComplaintProvider>();
     final teacherName = auth.user?.name ?? 'Teacher';
 
-    return Scaffold(
+    return GradientScaffold(
       appBar: AppBar(
         title: const Text('Teacher Home'),
         actions: [
@@ -144,7 +146,7 @@ class _TeacherHomeScreenState extends State<TeacherHomeScreen> {
                               itemBuilder: (ctx, i) {
                                 final c =
                                     complaintP.myComplaints[i];
-                                return Card(
+                                return HoverScale(child: Card(
                                   margin: const EdgeInsets.symmetric(
                                       horizontal: 16, vertical: 8),
                                   shape: RoundedRectangleBorder(
@@ -283,7 +285,7 @@ class _TeacherHomeScreenState extends State<TeacherHomeScreen> {
                                       ),
                                     ),
                                   ),
-                                );
+                                ));
                               },
                             ),
                     ),
