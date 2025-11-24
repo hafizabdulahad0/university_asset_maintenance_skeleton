@@ -22,8 +22,12 @@ class ComplaintProvider with ChangeNotifier {
 
   // Add a new complaint to the database
   Future<void> addComplaint(Complaint complaint) async {
-    await SupabaseService.insertComplaint(complaint);
-    notifyListeners();
+    try {
+      await SupabaseService.insertComplaint(complaint);
+      notifyListeners();
+    } catch (e) {
+      rethrow;
+    }
   }
 
   // Update a complaint (e.g., status change)

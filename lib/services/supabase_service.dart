@@ -64,18 +64,26 @@ class SupabaseService {
   static Future<int> insertComplaint(Complaint c) async {
     final session = supabase.auth.currentSession;
     final uid = session?.user.id;
-    final res = await supabase.from('complaints').insert({
+    if (uid == null) {
+      throw Exception('Not signed in');
+    }
+    final payload = {
       'title': c.title,
       'description': c.description,
       'media_path': c.mediaPath,
       'media_is_video': c.mediaIsVideo,
-      'status': c.status,
-      'teacher_id': c.teacherId,
+      'status': 'unassigned',
+      'teacher_id': uid,
       'staff_id': c.staffId,
       'reported_by': uid,
       'created_at': c.createdAt,
       'updated_at': c.updatedAt,
-    }).select('id').single();
+    };
+    final res = await supabase
+        .from('complaints')
+        .insert(payload)
+        .select('id')
+        .single();
     return (res['id'] as int);
   }
 

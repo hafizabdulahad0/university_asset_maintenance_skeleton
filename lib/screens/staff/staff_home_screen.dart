@@ -33,12 +33,15 @@ class _StaffHomeScreenState extends State<StaffHomeScreen> {
 
   Future<void> _loadComplaints() async {
     setState(() => _loading = true);
-    final user = context.read<AuthProvider>().user;
-    _unassigned = await SupabaseService.getUnassignedComplaints();
-    _assigned = user != null
-        ? await SupabaseService.getAssignedComplaintsByStaff(user.id!)
-        : <Complaint>[];
-    setState(() => _loading = false);
+    try {
+      final user = context.read<AuthProvider>().user;
+      _unassigned = await SupabaseService.getUnassignedComplaints();
+      _assigned = user != null
+          ? await SupabaseService.getAssignedComplaintsByStaff(user.id!)
+          : <Complaint>[];
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
   }
 
   Color _statusColor(String status) {
@@ -216,17 +219,18 @@ class _StaffHomeScreenState extends State<StaffHomeScreen> {
                       backgroundColor: _statusColor(c.status),
                     ),
                     ElevatedButton(
-                      onPressed: () async {
-                        c.staffId = user.id;
-                        c.status  = 'assigned';
-                        await SupabaseService.updateComplaint(c);
-                        // Notify admin
-                        notifProv.add(
-                          title: 'Assignment Requested',
-                          body: 'Staff ${user.name} requested complaint #${c.id}.',
-                        );
-                        await _loadComplaints();
-                      },
+                      onPressed: user.role == 'admin'
+                          ? () async {
+                              c.staffId = user.id;
+                              c.status  = 'assigned';
+                              await SupabaseService.updateComplaint(c);
+                              notifProv.add(
+                                title: 'Assignment Requested',
+                                body: 'Staff ${user.name} requested complaint #${c.id}.',
+                              );
+                              await _loadComplaints();
+                            }
+                          : null,
                       child: const Text('Take Up'),
                     ),
                   ],
@@ -275,16 +279,17 @@ class _StaffHomeScreenState extends State<StaffHomeScreen> {
                       backgroundColor: _statusColor(c.status),
                     ),
                     ElevatedButton(
-                      onPressed: () async {
-                        c.status = 'needs_verification';
-                        await SupabaseService.updateComplaint(c);
-                        // Notify admin to verify
-                        notifProv.add(
-                          title: 'Task Completed',
-                          body: 'Staff ${user.name} completed complaint #${c.id}.',
-                        );
-                        await _loadComplaints();
-                      },
+                      onPressed: user.role == 'admin'
+                          ? () async {
+                              c.status = 'needs_verification';
+                              await SupabaseService.updateComplaint(c);
+                              notifProv.add(
+                                title: 'Task Completed',
+                                body: 'Staff ${user.name} completed complaint #${c.id}.',
+                              );
+                              await _loadComplaints();
+                            }
+                          : null,
                       child: const Text('Mark Done'),
                     ),
                   ],

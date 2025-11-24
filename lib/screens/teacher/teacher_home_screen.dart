@@ -29,12 +29,16 @@ class _TeacherHomeScreenState extends State<TeacherHomeScreen> {
   void didChangeDependencies() {
     super.didChangeDependencies();
     final user = context.read<AuthProvider>().user;
-    if (user != null) {
-      _cp = context.read<ComplaintProvider>();
-      _cp.loadComplaintsForTeacher(user.id!).then((_) {
-        setState(() => _loading = false);
-      });
+    _cp = context.read<ComplaintProvider>();
+    if (user == null) {
+      setState(() => _loading = false);
+      return;
     }
+    _cp
+        .loadComplaintsForTeacher(user.id!)
+        .whenComplete(() {
+          if (mounted) setState(() => _loading = false);
+        });
   }
 
   Color _statusColor(String status) {
@@ -91,8 +95,11 @@ class _TeacherHomeScreenState extends State<TeacherHomeScreen> {
             final user = auth.user;
             if (user != null) {
               setState(() => _loading = true);
-              await _cp.loadComplaintsForTeacher(user.id!);
-              setState(() => _loading = false);
+              try {
+                await _cp.loadComplaintsForTeacher(user.id!);
+              } finally {
+                if (mounted) setState(() => _loading = false);
+              }
             }
           },
           child: _loading
@@ -305,8 +312,11 @@ class _TeacherHomeScreenState extends State<TeacherHomeScreen> {
           final user = auth.user;
           if (user != null) {
             setState(() => _loading = true);
-            await _cp.loadComplaintsForTeacher(user.id!);
-            setState(() => _loading = false);
+            try {
+              await _cp.loadComplaintsForTeacher(user.id!);
+            } finally {
+              if (mounted) setState(() => _loading = false);
+            }
           }
         },
       ),

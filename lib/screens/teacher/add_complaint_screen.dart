@@ -50,8 +50,17 @@ class _AddComplaintScreenState extends State<AddComplaintScreen> {
       createdAt: DateTime.now().toIso8601String(),
       updatedAt: DateTime.now().toIso8601String(),
     );
-    await context.read<ComplaintProvider>().addComplaint(comp);
-    Navigator.pop(context);
+    try {
+      await context.read<ComplaintProvider>().addComplaint(comp);
+      if (!mounted) return;
+      Navigator.pop(context);
+    } catch (e) {
+      final msg = e.toString();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(msg.contains('PostgrestException') ? 'Failed to submit complaint' : msg)),
+      );
+    }
   }
 
   @override
